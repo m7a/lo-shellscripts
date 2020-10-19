@@ -1,0 +1,5 @@
+mdvl-shellscripts (1.0.0) stable; urgency=medium
+
+  * Package created with MDPC 2
+
+ -- Linux-Fan, Ma_Sys.ma <Ma_Sys.ma@web.de>  Mon, 19 Oct 2020 22:57:39 +0200

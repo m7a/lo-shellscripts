@@ -1,0 +1,168 @@
+#!/bin/sh
+
+VERSION=2.2.0
+STYLESHEET=/usr/share/mdvl/ial/ial_compatible_html.css
+CONF=./overview_conf.sh
+OUTPUT_FILE=overview.xhtml
+APPEND_NON_SCRAPBOOK_ENTRIES=false
+SORT_AFTER_PREFIX=false
+IAL_COMPATIBLE=false
+WEBSCRAPBOOK=false
+DEFAULT_INDENTATION="				" # Four tabs
+
+previous_directory_prefix=
+
+ma_cprght() {
+	printf "\tScrapBook Overview Generator %s, " $VERSION
+	printf "Copyright (c) 2012, 2019 Ma_Sys.ma.\n"
+	printf "\tFor furhter info send an e-mail to Ma_Sys.ma@web.de.\n"
+}
+
+write_header() {
+	echo '<?xml version="1.0" encoding="UTF-8"?>'
+	echo
+	echo '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"'
+	echo '	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">'
+	echo "<!--"
+	ma_cprght
+	echo "-->"
+	echo '<html xmlns="http://www.w3.org/1999/xhtml">'
+	echo "	<head>"
+	echo "		<title>Generated overview</title>"
+	echo '		<link rel="shortcut icon" '
+	echo '			href="/usr/share/mdvl/icons/masysmaicon.png"/>'
+	echo '		<meta http-equiv="content-type" '
+	echo '			content="application/xhtml+xml; charset=UTF-8"'
+	echo '		/>'
+	if $IAL_COMPATIBLE && test -f "$STYLESHEET"
+	then
+		echo '		<style type="text/css">'
+		echo '			/* <![CDATA[ */'
+
+		# Indent output properly
+		cat "$STYLESHEET" | while read line
+		do
+			echo "			$line"
+		done
+
+		echo '			/* ]]> */'
+		echo "		</style>"
+	fi
+	echo "	</head>"
+	echo "	<body>"
+	echo '		<table summary="Scrap Book Overview" id="ma_spb">'
+	echo "			<caption>"
+	echo "				Generated Scrap Book Overview"
+	echo "			</caption>"
+	echo "			<thead>"
+	echo "				<tr>"
+	echo "					<th>Directory</th>"
+	echo "					<th>Title</th>"
+	echo "				</tr>"
+	echo "			</thead>"
+	echo "			<tbody>"
+}
+
+printin() {
+	echo "$DEFAULT_INDENTATION$@"
+}
+
+xmlize() {
+	printf "%s" "$@" | sed '/&/s//\&amp;/g' | sed '/</s//\&lt;/g' | \
+		sed '/>/s//\&gt;/g' | sed '/"/s//\&quot;/g' | tr '\n' ' '
+}
+
+# $1 directory
+# $2 title
+# $3 file
+write_entry() {
+	prefix=${1%%_*}
+	if ! [ "$prefix" = "$previous_directory_prefix" ]
+	then
+		previous_directory_prefix=$prefix
+		if $SORT_AFTER_PREFIX
+		then
+			printin '<tr><td>'$prefix'</td><td></td></tr>'
+		fi
+	fi
+	printin "<tr>"
+	printin "	<td>"
+	printin '		<a target="_blank" href="'$(xmlize "$1")'">'
+	printin "			"$(xmlize "$1")
+	printin "		</a>"
+	printin "	</td>"
+	printin "	<td>"
+	printin '		<a target="_blank" href="'$(xmlize "$3")'">'
+	printin "			$(xmlize "$2")"
+	printin "		</a>"
+	printin "	</td>"
+	printin "</tr>"
+}
+
+scrapbook_entry() {
+	title="$(grep -E '^title' "$1/index.dat" | cut -f 2 -d"	")"
+	write_entry "$1" "$title" "$1/index.html"
+}
+
+webscrapbook_entry() {
+	title="$(tr '\r\n<' '  \n' < "$1/index.html" | grep -E '^title>' | \
+						cut -d ">" -f 2-3 | head -n 1)"
+	write_entry "$1" "$title" "$1/index.html"
+}
+
+process_file() {
+	if test -d "$1"
+	then
+		if test -f "$1/index.dat"
+		then
+			scrapbook_entry "$1"
+		elif $WEBSCRAPBOOK
+		then
+			webscrapbook_entry "$1"
+		elif $APPEND_NON_SCRAPBOOK_ENTRIES
+		then
+			cd "$1"
+			for i in *
+			do
+				# Skip directories
+				if test -f "$i"
+				then
+					write_entry "$1" "$i" "$1/$i"
+				fi
+			done
+			cd ..
+		fi
+	fi
+}
+
+write_data() {
+	for current_file in *
+	do
+		echo "Processing $current_file..."
+		process_file $current_file >> "$OUTPUT_FILE"
+	done
+}
+
+write_footer() {
+	echo "			</tbody>"
+	echo "		</table>"
+	echo "	</body>"
+	echo "</html>"
+}
+
+ma_cprght
+
+if test -f "$CONF"
+then
+	. "$CONF"
+fi
+if $IAL_COMPATIBLE && ! test -f "$STYLESHEET"
+then
+	echo "WARNING: The output will not contain a stylesheet as"
+	echo "         $STYLESHEET could not be found."
+fi
+write_header > "$OUTPUT_FILE"
+write_data
+write_footer >> "$OUTPUT_FILE"
+
+exit

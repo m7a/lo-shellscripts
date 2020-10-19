@@ -1,0 +1,132 @@
+#!/bin/sh -e
+# Ma_Sys.ma Path Normalization Script 1.0.0.1, Copyright (c) 2015 Ma_Sys.ma.
+# For further info send an e-mail to Ma_Sys.ma@web.de.
+
+head -n 3 "$0" | tail -n 2 | cut -c 3-
+echo
+
+BADCHAR="ÄÖÜäöüß"
+BADSYM="+*()\`\"[]!,#~&%{}=?;"
+
+action=1
+re_lowercase=0
+re_badchar=0
+re_badsym=0
+re_spaces=0
+re_cosmetic=0
+
+if [ $# = 0 ]; then
+	cat <<EOF
+USAGE $(basename "$0") [-l] [-a] [-x] [-s] [-c] [-n]
+
+Renames files in the present working directory.
+
+-l    Make all files lowercase (also merges conflicting directory names)
+-a    Remove $BADCHAR
+-x    Remove symbols $BADSYM
+-s    Remove spaces
+-c    Cosmetic changes like " - " to "_"
+-n    No action. Only print changes
+EOF
+	exit 0
+fi
+
+while [ $# != 0 ]; do
+	case "$1" in
+	(-l) re_lowercase=1;;
+	(-a) re_badchar=1;;
+	(-x) re_badsym=1;;
+	(-s) re_spaces=1;;
+	(-c) re_cosmetic=1;;
+	(-n) action=0;;
+	(*)  echo Unknown option: $1 1>&2; exit 1;;
+	esac
+	shift
+done
+
+mytransformers=/tmp/transformers$$.txt
+mytransformers2=/tmp/transformers$$_2.txt
+: > "$mytransformers"
+[ $re_cosmetic  = 0 ] || echo " | sed 's/-/_/g'"     >> "$mytransformers"
+[ $re_lowercase = 0 ] || echo ' | tr "A-Z" "a-z"'    >> "$mytransformers"
+[ $re_spaces    = 0 ] || echo ' | tr " " "_"'        >> "$mytransformers"
+[ $re_badchar   = 0 ] || echo " | tr '$BADCHAR' 'x'" >> "$mytransformers"
+[ $re_badsym    = 0 ] || echo " | tr '$BADSYM' '_'"  >> "$mytransformers"
+[ $re_badsym    = 0 ] || echo " | tr \"'\" '_'"      >> "$mytransformers"
+[ $re_cosmetic  = 0 ] || echo " | sed 's/_\\+/_/g'"  >> "$mytransformers"
+tr '\n' ' ' < "$mytransformers" > "$mytransformers2"
+rm "$mytransformers"
+mytransformers3="$(cat "$mytransformers2")"
+rm "$mytransformers2"
+
+echo "TRANSFORM: $mytransformers3"
+echo
+
+acpre=
+if [ $action = 0 ]; then
+	acpre='echo ACTION '
+fi
+
+find -depth -type d | while read -r line; do
+	if [ ! -d "$line" ]; then
+		echo Gone: $line
+		continue
+	fi
+	basename="$(basename "$line")"
+	if [ "$basename" = . ]; then
+		continue
+	fi
+	new_bname="$(eval echo "\$basename" $mytransformers3)"
+	new_name="$(dirname "$line")/$new_bname"
+	if [ "$line" != "$new_name" ]; then
+		printf "%s -> %s " "$line" "$new_name"
+		if [ -d "$new_name" ]; then
+			printf "C "
+			$acpre cp -Ri "$line/." "$new_name/" </dev/stdin
+			printf "D "
+			$acpre rm -r "$line"
+		else
+			printf "N "
+			$acpre mv "$line" "$new_name"
+		fi
+		echo " ... OK"
+	fi
+done
+
+find -type f | while read -r line; do
+	if [ ! -f "$line" ]; then
+		echo Gone: $line. Fatal error.
+		exit 1
+	fi
+	basename="$(basename "$line")"
+	new_bname="$(eval echo "\$basename" $mytransformers3)"
+	new_name="$(dirname "$line")/$new_bname"
+	if [ "$line" != "$new_name" ]; then
+		printf "%s -> %s " "$line" "$new_name"
+		if [ -f "$new_name" ]; then
+			echo
+			echo "  Conflict for file $new_name."
+			md5sum "$line" "$new_name" | sed 's/^/    /g'
+			valid=0
+			while [ $valid = 0 ]; do
+				printf "  [o]verwrite/[s]kip/[a]ppend %s" \
+							"number/[q]uit? " 
+				# TODO CSTAT N_POSS DUE TO IN FOR LOOP...
+				read answer </dev/tty
+				case "$answer" in
+				(o) $acpre mv "$line" "$new_name";
+					valid=1;;
+				(s) echo "  ... skipped"; valid=1;;
+				(a) $acpre mv -i "$line" "${new_name}_$$";
+					valid=1;;
+				(q) valid=1; exit 1;;
+				(*) echo "  Unknown input: $answer";;
+				esac
+			done
+		else
+			printf "N "
+			$acpre mv "$line" "$new_name"
+		fi
+		echo " ... OK"
+	fi
+done

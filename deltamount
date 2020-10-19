@@ -1,0 +1,68 @@
+#!/bin/sh -e
+#==============================================================
+# Ma_Sys.ma Delta Mount 1.0.0.0, Copyright (c) 2014 Ma_Sys.ma.
+# For further info send an e-mail to Ma_Sys.ma@web.de.
+#==============================================================
+
+head -n 5 "$0" | tail -n 4 | cut -c 2-
+echo
+
+if [ $# -le 1 ]; then
+	cat <<EOF
+USAGE $(basename "$0") src dest [delta]
+
+This script uses aufs(5) from aufs-tools to create a writeable directoy which
+contains the files from src. Unlike a normal bind-mount, the changes made to the
+files in dest are not written back to src but instead to a third directory
+called delta.
+
+src     A source directory
+dest    A mountpoint
+delta   Reflects the difference between dest and src
+EOF
+	exit 1
+fi
+
+if [ "$(id -u)" != 0 ]; then
+	echo This script must be run by root.
+	exit 2
+fi
+
+src="$1"
+
+if [ ! -d "$src" ]; then
+	echo Source directory does not exist.
+	exit 2
+fi
+
+dest="$2"
+
+if [ ! -d "$dest" ]; then
+	echo Destination directory does not exist.
+	exit 2
+fi
+
+delta=
+
+if [ $# = 2 ]; then
+	delta="/tmp/deltamount_$$"
+	if [ -d "$delta" ]; then
+		echo Delta directory $delta already exists. Chose another one.
+		exit 2
+	else
+		mkdir "$delta"
+	fi
+else
+	delta="$3"
+	if [ ! -d "$delta" ]; then
+		echo Delta directory $delta does not exist. Leave empty to \
+			chose one automatically.
+		exit 2
+	fi
+fi
+
+echo src=$src
+echo dest=$dest
+echo delta=$delta
+
+exec mount -t aufs -o "dirs=$delta:$src" none "$dest"

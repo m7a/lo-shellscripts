@@ -1,0 +1,121 @@
+#!/bin/sh -e
+# Ma_Sys.ma generic VNC connection script, version 1.0.0.2,
+# Copyright (c) 2016 Ma_Sys.ma.
+# For furhter info send an e-mail to Ma_Sys.ma@web.de
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Notice: On Debian systems, the license can be found under
+#         /usr/share/common-licenses/GPL-3
+
+if [ "$1" = "pseudoproc" ]; then
+	# Required to keep the server alive while the client is running.
+	# Exec is vital because we may only have one PID
+	exec sleep 100000
+fi
+
+an="$(basename "$0")"
+
+if [ $# = 0 -o "$1" = "--help" ]; then
+	cat <<EOF
+USAGE $an target [sshparams [wm [remote_dnr [local_dnr [dy [dx [vncopt]]]]]]]
+EOF
+	exit 1
+fi
+
+target="$1"
+sshparams="$2"
+wm="$3"
+dnr="$4"
+dnr2="$5"
+deltay="$6"
+deltax="$7"
+viewopts="$8"
+
+[ -n "$dnr"    ] || dnr=41
+[ -n "$dnr2"   ] || dnr2=2
+[ -n "$deltay" ] || deltay=40
+[ -n "$deltax" ] || deltax=4
+
+# Determine VNC resolution by using the current screen size.
+# Other window managers' users might want to change this or go for full screen.
+rr="$(xrandr | grep -E "^  .*\*" | head -n 1 | sed 's/\s\+/ /g' | \
+							cut -d " " -f 2)"
+rh="$(($(echo "$rr" | cut -dx -f 2) - $deltay))"
+rw="$(($(echo "$rr" | cut -dx -f 1) - $deltax))"
+
+# Generate random password for this session. Unfortunately we are limited to
+# 8 characters. If you believe md5sum is not good, you might want to use base64
+# (more characters but probably higher predicatibility)
+passw="$(head -c 64 /dev/random | md5sum | cut -c -8)"
+
+echo "[$an     ] Using password ${passw}."
+
+# Create window manager configuration if wanted
+wmline=
+if [ -n "$wm" ]; then
+	wmline="echo '\$vncStartup = \"exec $wm\"' > \$HOME/.vncrc;"
+fi
+
+# ():
+# Spawn a pseudoproc (a process which just waits forever) and send its PID and
+# the current password to the server, then just wait forever.
+#
+# ssh -i ...:
+# Connect local port 5900 + dnr2 to server's 5900 + dnr where dnr are the
+# display numbers (need to be added to determine the real port).
+# On the server, read PID and password, create a passwordifle and start the
+# server. Then send a success synchronization message and wait for the input
+# stream to be closed (happens when pseudoproc terminates).
+#
+# while read -r line:
+# Wait for synchronization message and extract PID (only valid on the local
+# machine anyway). Connect using the VNC client and terminate pseudoproc once
+# the client terminates thereby closing the remote session.
+#
+# The idea of this ``Local PID -> Server (TEXT) -> Local (PID)'' is to avoid
+# an unecessary temporary file.
+
+( "$0" pseudoproc & pid2=$!; echo "$pid2 $passw"; wait $pid2 ) | \
+	ssh $sshparams \
+		-L $((5900 + $dnr2)):localhost:$((5900 + $dnr)) "$target" \
+		"read -r pid2 passw; \
+		rm \"/tmp/.X11-unix/X$dnr\" \"/tmp/.X$dnr-lock\" 2> /dev/null; \
+		[ -d \"\$HOME/.vnc\" ] || mkdir \"\$HOME/.vnc\"; \
+		echo \"\$passw\" | vncpasswd -f > \"\$HOME/.vnc/passwd\"; \
+		chmod 0600 \"\$HOME/.vnc/passwd\"; \
+		$wmline
+		echo \"@\$(uname -n) Starting server... \" \
+					\"(pid=\$pid2, passw=\$passw)\"; \
+		vncserver -geometry \"${rw}x$rh\" \":$dnr\" 2>&1; \
+		echo MXCHSUCCESS\$pid2; \
+		read nothing; \
+		vncserver -kill :$dnr 2>&1" | \
+	while read -r line; do
+		msg="$(echo "$line" | cut -c -11)"
+		if [ "$msg" = "MXCHSUCCESS" ]; then
+			pid="$(echo "$line" | cut -c 12-)"
+			echo "[$an     ] Starting viewer " \
+						"(Pseudoproc running @$pid)"
+			echo "$passw" | xtightvncviewer \
+				-compresslevel 9 -autopass \
+				-encodings Tight localhost:$dnr2 \
+				$viewopts 2>&1 | \
+				sed 's/^/\['"$an"'\/VIEW\] /g'
+			echo "[$an     ] Killing Pseudoproc $pid"
+			kill "$pid"
+		else
+			echo "[$an/SSH ] $line"
+		fi
+	done

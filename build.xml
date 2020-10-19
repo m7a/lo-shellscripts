@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project default="build">
+
+<!-- APPLICATION METADATA -->
+<property name="mdpc.name"      value="mdvl-shellscripts"/>
+<property name="mdpc.section"   value="utils"/>
+<property name="mdpc.descrs"    value="Standalone and useful shell scripts for Linux systems"/>
+<property name="mdpc.arch"      value="all"/>
+<property name="mdpc.depends"   value="dialog"/>
+<property name="mdpc.conflicts" value="mdvl-scripts (&lt;= 1.0.383)"/>
+<property name="mdpc.descrl">
+ This package provides various Ma_Sys.ma shell scripts used with MDVL.
+ Most of the scripts only need a basic shell interpreter while others use
+ other pograms.
+ .
+ All of these scripts are intended to be runnable independent of each other
+ and may thus be useful in non-MDVL contexts, too.
+</property>
+
+<property name="mdpc.file.install">
+boxes /usr/bin
+deltamount /usr/bin
+find_double_windows_filenames /usr/bin
+gimp_convert_to_indexed /usr/bin
+ma_cryptvol /usr/bin
+ma_rename_normalize /usr/bin
+ma_scrmir /usr/bin
+ma_vnc_over_ssh /usr/bin
+rmbc /usr/bin
+scrapbook_overview /usr/bin
+set_xdev_enabled /usr/bin
+virshmigtui /usr/bin
+</property>
+
+<!-- CI INTEGRATION -->
+<target name="package_triggered" depends="package">
+	<property name="masysma.ci.trigger" value="newver"/>
+</target>
+
+<!-- CONSTANT TPL IMPORT -->
+<property environment="env"/>
+<condition property="masysma.internal.includepath.rel" value="${env.MDVL_CI_PHOENIX_ROOT}" else=".."><isset property="env.MDVL_CI_PHOENIX_ROOT"/></condition>
+<property name="masysma.internal.includepath" location="${masysma.internal.includepath.rel}"/>
+<property name="masysma.internal.loadpath" value="${masysma.internal.includepath}/co-build/ant-build-template.xml"/>
+<condition property="masysma.internal.load" value="file://${masysma.internal.loadpath}" else="https://raw.githubusercontent.com/m7a/co-build/master/ant-build-template.xml"><resourceexists><file file="${masysma.internal.loadpath}"/></resourceexists></condition>
+<import><url url="${masysma.internal.load}"/></import>
+
+</project>

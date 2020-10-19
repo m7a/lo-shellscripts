@@ -1,0 +1,68 @@
+#!/bin/sh -e
+# Recursive Ma_Sys.ma Backup Copy 1.2.0.0,
+# Copyright (c) 2012, 2013, 2015 Ma_Sys.ma.
+# Derived from the Ma_Sys.ma Backup Copy Mover (MBC) 1.0.
+# For further info send an e-mail to Ma_Sys.ma@web.de.
+
+# This configuration may be changed by included hooks
+BAK=.bak
+DST=backup_copies
+RECURSE=false
+PRE=./rmbc_pre
+POST=./rmbc_post
+MV=mvdot
+
+mvdot() {
+	printf .
+	mv "$@"
+}
+
+if [ "$1" = "--help" ]; then
+	head -n 5 "$0" | tail -n 4 | cut -c 3-
+	echo
+	echo This script does not take any parameters. Check the source code \
+		for details.
+	exit 0
+elif [ $# != 0 ]; then
+	echo "Try $0 --help." 1>&2
+	exit 1
+fi
+
+[ ! -f "$PRE" ] || . "$PRE"
+
+a_rec=
+[ "$RECURSE" = true ] || a_rec="-maxdepth 1"
+
+printf "[begin] "
+
+find . -type d $a_rec -\! -name "$DST" | while read -r cdir; do
+		listing=
+		if [ -d "$cdir/$DST" ]; then
+			listing="$(find "$cdir/$DST" -type f -maxdepth 1)"
+		else
+			mkdir "$cdir/$DST"
+		fi
+		find "$cdir" -type f -maxdepth 1 -name 'Kopie *' | \
+							while read -r i; do
+			fn="$(basename "$i")"
+			original="${fn##Kopie*von }"
+			number="${fn##Kopie (}"
+			number="${number%%)*}"
+			[ "$number" != "$fn" ] || number=1
+			append="$(echo "$listing" | \
+						grep -F "$original" | \
+						wc -l | cut -d" " -f 1)"
+			number="$(($number + $append))"
+			dstfil="$cdir/$DST/${original}_$number$BAK"
+			if [ -f "$dstfil" ]; then
+				printf E
+				exit 64
+			else
+				$MV "$i" "$dstfil"
+			fi
+		done
+	done
+
+echo " [end]"
+
+[ ! -f "$POST" ] || . "$POST"

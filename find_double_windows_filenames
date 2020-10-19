@@ -1,0 +1,4 @@
+#!/bin/sh
+
+#find . | tr A-Z a-z | sort | uniq -c | sort -nr | grep -v '^  *1 '
+exec find . | tr A-Z a-z | sort | uniq -d

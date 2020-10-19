@@ -1,0 +1,49 @@
+#!/bin/sh
+# Ma_Sys.ma Screen Mirroring Script 1.0.0.1, Copyright (c) 2016 Ma_Sys.ma.
+# For further info send an e-mail to Ma_Sys.ma@web.de.
+
+dl=""
+cdp=""
+alll=""
+xrandr | grep -E "( connected|([0-9]+x[0-9]+))" | (
+	while read -r line; do
+		dn="$(echo "$line" | cut -d" " -f1)"
+		if echo "$dn" | grep -qE "^([0-9]+x[0-9]+)"; then
+			alll="$alll\n$dn $cdp"
+		else
+			cdp="[$dn]"
+			dl="$dl $cdp"
+		fi
+	done 
+
+	# moved by one due to leading space
+	primary="$(echo "$dl" | cut -d" " -f2)"
+	others="$(echo "$dl" | cut -d" " -f3-)"
+	echo PRIMARY $primary OTHERS $others
+
+	jall="$(echo "$alll" | grep -F "$primary")"
+	for i in $others; do
+		jcurr="$(echo "$alll" | grep -F "$i" | cut -d" " -f1)"
+		jnew=""
+		for j in $jall; do
+			jnew="$jnew $(echo "$jcurr" | grep -F "$j")"
+		done
+		jall="$jnew"
+	done
+
+	if [ -n "$jall" ]; then
+		selres="$(echo $jall | cut -d" " -f1)"
+		priname="$(echo "$primary" | tr -d '[]')"
+		cmd="xrandr --output $priname --mode $selres "
+		for i in $others; do
+			cmd="$cmd --output $(echo "$i" | \
+				tr -d '[]') --mode $selres --same-as $priname"
+		done
+		echo $cmd
+		eval $cmd
+	else
+		echo NO MATCHING RESOLUTION FOUND 1>&2
+		exit 1
+	fi
+)
+

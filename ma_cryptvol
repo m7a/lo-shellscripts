@@ -1,0 +1,142 @@
+#!/bin/sh -e
+# Ma_Sys.ma Encrypted Volume Manager 1.0.3, Copyright (c) 2015, 2017 Ma_Sys.ma.
+# For further info send an e-mail to Ma_Sys.ma@web.de.
+
+mcvol_main() {
+	if [ "$1" = "--noconf" ]; then
+		shift
+	else
+		mcvol_incconf "$@"
+	fi
+
+	if [ "$1" = "--startreal" ]; then
+		shift
+	elif [ "$(id -u)" != 0 -a "$CRYPTVOL_SUDO" = 1 ]; then
+		exec sudo "$0" --noconf --startreal "$@"
+	fi
+
+	if [ $# = 0 ]; then
+		mcvol_default
+	else
+		mcvol_procparam "$@"
+	fi
+}
+
+mcvol_incconf() {
+	if [ -n "$MDVL_CRYPTVOL_CONF" ]; then
+		. "$MDVL_CRYPTVOL_CONF"
+	elif [ -f "$HOME/.mdvl/cryptvol.conf" ]; then
+		. "$HOME/.mdvl/cryptvol.conf"
+	fi
+}
+
+mcvol_default() {
+	if [ -z "$CRYPTVOL_UUID" ]; then
+		echo Cryptvol UUID not set. Use --help or --init device. 1>&2
+		exit 1
+	else
+		mcvol_mountcryptvol "/dev/disk/by-uuid/$CRYPTVOL_UUID" \
+				"$CRYPTVOL_MOUNTPOINT" "$CRYPTVOL_DELTA" \
+				"$CRYPTVOL_SUBMOUNT" "$CRYPTVOL_DEVICE_NAME"
+	fi
+}
+
+# $1 disk, $2 mountpoint (can be empty), $3 use delta, $4 submount dir, $5 devn
+mcvol_mountcryptvol() {
+	disk="$1"
+
+	mountpoint="$2"
+	[ -n "$mountpoint" ] || mountpoint=/media/cryptvol
+	[ -d "$mountpoint" ] || mkdir "$mountpoint"
+
+	use_delta="$3"
+
+	submount="$4"
+	[ -n "$submount" ] || submount=/media/cryptvol_submount
+	[ -d "$submount" ] || mkdir "$submount"
+
+	devicename="$5"
+	[ -n "$devicename" ] || devicename=cryptvol_default
+
+	devicefile="/dev/mapper/$devicename"
+
+	if [ -e "$devicefile" ]; then
+		umount "$mountpoint"
+		umount "$submount"
+		cryptsetup close "$devicefile"
+		mount | grep crypt || :
+	else
+		cryptsetup open --type luks "$disk" "$CRYPTVOL_DEVICE_NAME"
+		mount "$devicefile" "$submount"
+		if [ "$use_delta" = 1 ]; then
+			deltamount "$submount/data" "$mountpoint" \
+							"$submount/delta"
+		else
+			mount -o bind "$submount/data" "$mountpoint"
+		fi
+	fi
+}
+
+mcvol_procparam() {
+	option="$1"
+	shift
+	case "$option" in
+	(--help|-help|help|-\?)
+		mcvol_help;;
+	(--init)
+		mcvol_init "$@";;
+	(--mountcryptvol)
+		mcvol_mountcryptvol "$@";;
+	(*)
+		echo "Unknown options: $*" 1>&2
+		mcvol_help
+		exit 1;;
+	esac
+}
+
+mcvol_help() {
+	head -n 3 "$0" | tail -n 2 | cut -c 3-
+	program="$(basename "$0")"
+	cat <<EOF
+
+USAGE $program --help
+USAGE $program --init device
+USAGE $program --mountcryptvol device mountpoint [delta] [submount] [devicename]
+USAGE $program
+
+device      Encrypted device to work on.
+mountpoint  Mountpoint to make \`data\` available
+delta       If 0, the data is directly presented, if 1, \`deltamount\` is used
+submount    Intermediate mountpoint directory (to hold the device contents)
+            If this is not given, /media/cryptvol_submount is used.
+devicename  Mapper name for cryptvol device (one identifier only, no full path)
+
+CRYPTVOL_UUID, CRYPTVOL_MOUNTPOINT, CRYPTVOL_DELTA, CRYPTVOL_SUBMOUNT,
+CRYPTVOL_DEVICE_NAME are configuration variables for ~/.mdvl/cryptvol.conf
+(MDVL_CRYPTVOL_CONF) to supply these parameters for general invocation.
+
+Set CRYPTVOL_SUDO to 1 to enable auto re-invocation w/ sudo (needs to be
+configured separately).
+
+Normal invication toggles mount status. It is assumed that the data is stored in
+a directory \`data\` and the differences are written to a directory \`delta\`.
+EOF
+}
+
+# $1 device to work on (should be a partition)
+mcvol_init() {
+	cryptsetup -y luksFormat "$1"
+	cryptsetup open --type luks "$1" cryptvol_tmp
+	big4 -b /dev/mapper/cryptvol_tmp 4 TiB || echo Big4 finished
+	mkfs.ext4 /dev/mapper/cryptvol_tmp
+	mkdir /media/cryptvol$$
+	mount /dev/mapper/cryptvol_tmp /media/cryptvol$$
+	mkdir /media/cryptvol$$/data /media/cryptvol$$/delta
+	umount /media/cryptvol$$
+	rmdir /media/cryptvol$$
+	cryptsetup close cryptvol_tmp
+	blkid | grep -F "$1"
+	echo Setup completed successfully.
+}
+
+mcvol_main "$@"

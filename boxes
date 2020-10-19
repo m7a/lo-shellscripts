@@ -1,0 +1,63 @@
+#!/bin/bash
+# Displays some boxes
+
+echo
+echo '╔══════════════════════════════════════════════════════════════════════════════╗'
+echo -e '║ \033[36;40;1m                                  BOXES 1.0                                 \033[0m ║'
+echo -e '║ \033[36;40;1m                        Copyright (c) 2010 Ma_Sys.ma                        \033[0m ║'
+echo -e '║ \033[36;40;1m            For further info send an e-mail to Ma_Sys.ma@web.de             \033[0m ║'
+echo -e '╟──────────────────────────────────────────────────────────────────────────────╢'
+echo -e '║ \033[37;40;1mThis expamle shows you some boxes drawed with usual letters and with special\033[0m ║'
+echo -e '║ \033[37;40;1mgraphical characters, which are created to make command-line applications   \033[0m ║'
+echo -e '║ \033[37;40;1mable to draw boxes for important messages. You can copy the characters for  \033[0m ║'
+echo -e '║ \033[37;40;1mthe boxes into your own applications. This lets you style your command-line \033[0m ║'
+echo -e '║ \033[37;40;1minterfaces much better. This applications has three sections for different  \033[0m ║'
+echo -e '║ \033[37;40;1mtypes of boxes.                                                             \033[0m ║'
+echo -e '║ \033[32;40;1m                                                  Have fun with this script!\033[0m ║'
+echo '╚══════════════════════════════════════════════════════════════════════════════╝'
+echo
+echo -e '\033[35;40;2mSECTION 1 - Graphical Character boxes\033[0m'
+echo -e '\033[35;40;2m-------------------------------------\033[0m'
+echo ' This boxes have the big advantage that they look very stylish.'
+echo " The problem is that it isn't very easy to use them. You have to copy any"
+echo ' character from an other program, (e.g. from this script).'
+echo '──────────────'  '┌────────────┐'  '╔════════════╗'  '■■■■■■■■■■■■■■'  '██████████████'
+echo '│ TESTBOX 01 │'  '│ TESTBOX 02 │'  '║ TESTBOX 03 ║'  '■ TESTBOX 04 ■'  '█ TESTBOX 05 █'
+echo '──────────────'  '└────────────┘'  '╚════════════╝'  '■■■■■■■■■■■■■■'  '██████████████' 
+echo '▀▀▀▀▀▀▀▀▀▀▀▀▀▀'  '▄▄▄▄▄▄▄▄▄▄▄▄▄▄'  '◘◘◘◘◘◘◘◘◘◘◘◘◘◘'  '░░░░░░░░░░░░░░'  '▒▒▒▒▒▒▒▒▒▒▒▒▒▒'
+echo '▌ TESTBOX 06 ▐'  '▌ TESTBOX 07 ▐'  '◘ TESTBOX 08 ◘'  '░ TESTBOX 09 ░'  '▒ TESTBOX 10 ▒'
+echo '▄▄▄▄▄▄▄▄▄▄▄▄▄▄'  '▀▀▀▀▀▀▀▀▀▀▀▀▀▀'  '◘◘◘◘◘◘◘◘◘◘◘◘◘◘'  '░░░░░░░░░░░░░░'  '▒▒▒▒▒▒▒▒▒▒▒▒▒▒' 
+echo '▓▓▓▓▓▓▓▓▓▓▓▓▓▓'  
+echo '▓ TESTBOX 11 ▓'  
+echo '▓▓▓▓▓▓▓▓▓▓▓▓▓▓'  
+echo
+echo -e '\033[35;40;2mSECTION 2 - Special Character boxes\033[0m'
+echo -e '\033[35;40;2m-----------------------------------\033[0m'
+echo " This boxes are drawn out of characters which aren't usual letters from A to Z."
+echo " But this boxes aren't created out of graphical characters, so you can write"
+echo ' them on your keyboard. They are very often used.'
+echo '**************'  '--------------'  '##############'  '++++++++++++++'  '=============='
+echo '* TESTBOX XX *'  '| TESTBOX YY |'  '# TESTBOX ZZ #'  '+ TESTBOX AA +'  '  TESTBOX BB  '
+echo '**************'  '--------------'  '##############'  '++++++++++++++'  '=============='
+echo '°°°°°°°°°°°°°°'  '~~~~~~~~~~~~~~'  '""""""""""""""'  '//////////////'  '\\\\\\\\\\\\\\ '
+echo '° TESTBOX CC °'  '  TESTBOX YY  '  '  TESTBOX YY  '  '/ TESTBOX YY /'  '\ TESTBOX YY \ '
+echo '°°°°°°°°°°°°°°'  '~~~~~~~~~~~~~~'  '""""""""""""""'  '//////////////'  '\\\\\\\\\\\\\\ '
+echo
+echo -e '\033[35;40;2mSECTION 3 - Usual Character boxes\033[0m'
+echo -e '\033[35;40;2m---------------------------------\033[0m'
+echo ' These boxes are drawn out of letters from the latin alphabet.'
+echo " They are usefoul if you cannot use the other ones. But they aren't"
+echo ' used very often because the case before is not often.'
+echo 'xxxxxxxxxxxxxx'  'XXXXXXXXXXXXXX'  'mmmmmmmmmmmmmm'  'iiiiiiiiiiiiii'  'IIIIIIIIIIIIII'
+echo 'x TESTBOX CC x'  'X TESTBOX YY X'  '  TESTBOX YY  '  'i TESTBOX YY i'  'I TESTBOX YY I'
+echo 'xxxxxxxxxxxxxx'  'XXXXXXXXXXXXXX'  'mmmmmmmmmmmmmm'  'iiiiiiiiiiiiii'  'IIIIIIIIIIIIII'
+echo 'wwwwwwwwwwwwww'  '11111111111111'  'llllllllllllll'  'iiiiiiiiiiiiii'  'IIIIIIIIIIIIII'
+echo 'w TESTBOX CC w'  '1 TESTBOX YY 1'  'l TESTBOX YY l'  'i TESTBOX YY i'  'I TESTBOX YY I'
+echo 'wwwwwwwwwwwwww'  '11111111111111'  'llllllllllllll'  'iiiiiiiiiiiiii'  'IIIIIIIIIIIIII'
+echo 'WWWWWWWWWWWWWW'  'MMMMMMMMMMMMMM'  'uuuuuuuuuuuuuu'  'UUUUUUUUUUUUUU'  'oooooooooooooo'
+echo 'W TESTBOX CC W'  'M TESTBOX YY M'  'u TESTBOX YY u'  'U TESTBOX YY U'  'o TESTBOX YY o'
+echo 'WWWWWWWWWWWWWW'  'MMMMMMMMMMMMMM'  'uuuuuuuuuuuuuu'  'UUUUUUUUUUUUUU'  'oooooooooooooo'
+echo 'OOOOOOOOOOOOOO'  '00000000000000'  'VVVVVVVVVVVVVV'  'vvvvvvvvvvvvvv'  'zzzzzzzzzzzzzz'
+echo 'O TESTBOX CC O'  '0 TESTBOX YY 0'  'V TESTBOX YY V'  'v TESTBOX YY v'  '  TESTBOX YY  '
+echo 'OOOOOOOOOOOOOO'  '00000000000000'  'VVVVVVVVVVVVVV'  'vvvvvvvvvvvvvv'  'zzzzzzzzzzzzzz'
+echo

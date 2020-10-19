@@ -1,0 +1,168 @@
+#!/bin/sh -e
+# Libvirt Offline Migration Terminal UI 1.0.2, Copyright (c) 2017 Ma_Sys.ma.
+# For further info send an e-mail to Ma_Sys.ma@web.de.
+
+vmg_virt_manager_log="$HOME/.cache/virt-manager/virt-manager.log"
+vmg_connlist_mdvl="$HOME/.mdvl/virt-manager-connlist.log"
+
+vmg_connlistfiles=
+for i in $vmg_virt_manager_log $vmg_connlist_mdvl; do
+	[ ! -f "$i" ] || vmg_connlistfiles="$vmg_connlistfiles
+$i"
+done
+
+export DIALOGOPTS="--backtitle \"$(head -n 2 "$0" | tail -n 1 | cut -c 3-)\""
+
+if [ -z "$vmg_connlistfiles" ]; then
+	dialog --msgbox "ERROR: No connlist file finound.\n" 6 70
+	exit 1
+fi
+
+# Read List of connections
+vmg_connlist=
+# shellcheck disable=SC2086
+vmg_connlist_raw="$(cat $vmg_connlistfiles | awk 'BEGIN {
+	mirror = 0
+	numln = 0
+}
+/^\[[^\]]+ virt-manager [^\]]+\]/ {
+	mirror = 0
+}
+/Loading stored URIs:$/ {
+	mirror = 1
+	numln = 0
+}
+{
+	if(mirror == 0) {
+		next
+	} else {
+		numln++
+		if($0 == "qemu:///system") {
+			printf "C0 %s\n", $0
+		} else {
+			printf "c%d %s\n", numln, $0
+		}
+	}
+}
+END {
+	printf "%d\n", numln
+}')"
+
+vmg_connlist_numln="$(echo "$vmg_connlist_raw" | tail -n 1)"
+[ -z "$vmg_connlist_numln" ] || vmg_connlist="$(echo "$vmg_connlist_raw" | \
+	tail -n "$vmg_connlist_numln" | \
+	head -n "$((vmg_connlist_numln - 1))" | sort | uniq)"
+
+if [ -z "$vmg_connlist" ]; then
+	dialog --msgbox "ERROR: Connlist empty. Please adjust script or populate log.\nFiles: $vmg_connlistfiles" 7 70
+	exit 1
+fi
+
+while true; do
+	dialog --infobox "Scanning..." 3 15
+
+	vmg_enr=1
+	vmg_menulist="R refresh"
+	vmg_urlmax=0
+	vmg_nrlist=
+	vmg_bakifs="$IFS"
+	vmg_menmaxw=22
+	IFS="
+"
+	for vmg_line in $vmg_connlist; do
+		vmg_tag="$(echo "$vmg_line" | cut -d" " -f 1)"
+		vmg_menulist="$vmg_menulist
+$vmg_line"
+		vmg_curw="$(echo "$vmg_line" | wc -c)"
+		[ "$vmg_menmaxw" -ge "$vmg_curw" ] || vmg_menmaxw="$vmg_curw"
+		[ "$vmg_urlmax" -ge "$vmg_curw" ] || vmg_urlmax="$vmg_curw"
+		if [ "$(echo "$vmg_line" | head -c 1)" = C ]; then
+			vmg_url="$(echo "$vmg_line" | cut -d" " -f 2)"
+			vmg_titles="$(virsh -c "$vmg_url" list --title --all)"
+			for vmg_vmnam in $(virsh -c "$vmg_url" list \
+							--name --all | sort); do
+				vmg_curtitle="$vmg_vmnam"
+				vmg_potml="$(echo "$vmg_titles" | cut -c 8- | \
+							grep -E "^$vmg_vmnam")"
+				if [ "$(echo "$vmg_potml" | wc -l)" = 1 ]; then
+					vmg_title="$(echo "$vmg_potml" | \
+							cut -c 43- | sed \
+							-e 's/^\s\+//g' \
+							-e 's/\s\+$//g')"
+					if [ -n "$vmg_title" ] && [ "$(echo \
+							"$vmg_potml" | \
+							cut -c 42)" = " " ];
+							then
+						vmg_curtitle="$vmg_title"
+					fi
+				fi
+				vmg_curtitle="...$(echo "$vmg_curtitle" | \
+								tr " " .)"
+				vmg_curw="$(echo "$vmg_curtitle" | wc -c)"
+				[ "$vmg_curw" -le "$vmg_menmaxw" ] || \
+					vmg_menmaxw="$vmg_curw"
+				vmg_nrlist="$vmg_nrlist
+$vmg_enr;$vmg_vmnam"
+				vmg_menulist="$vmg_menulist
+${vmg_tag}v$vmg_enr $vmg_curtitle"
+				vmg_enr=$((vmg_enr + 1))
+			done
+		fi
+	done
+	IFS="$vmg_bakifs"
+
+	vmg_maxh="$((LINES - 7))"
+	[ -n "$vmg_maxh" ] || vmg_maxh=25
+	vmg_numentries="$(echo "$vmg_menulist" | wc -l)"
+	[ "$vmg_maxh" -ge "$vmg_numentries" ] || \
+					vmg_numentries="$((vmg_maxh - 7))"
+
+	vmg_maxw="$((COLUMNS - 12))"
+	[ "$vmg_menmaxw" -ge "$vmg_maxw" ] || vmg_maxw="$vmg_menmaxw"
+
+	# https://stackoverflow.com/questions/29222633/bash-dialog-input-in-a-
+	# 								variable
+	vmg_sel="$(dialog --menu "Select VM or Connection" \
+		"$((vmg_numentries + 7))" $((vmg_menmaxw + 12)) \
+		"$vmg_numentries" $vmg_menulist \
+		3>&1 1>&2 2>&3 3>&- || echo EXIT)"
+
+	vmg_nr="$(echo "$vmg_sel" | cut -c 2-)"
+	case "$vmg_sel" in
+	(?*v*)
+		vmg_sourceurl="$(echo "$vmg_connlist" | \
+				grep -E "^$(echo "$vmg_sel" | cut -dv -f 1)" | \
+				cut -d" " -f 2)"
+		vmg_nr="$(echo "$vmg_sel" | cut -dv -f 2)"
+		vmg_vmnam="$(echo "$vmg_nrlist" | grep -E "^$vmg_nr;" | \
+				cut -d";" -f 2-)"
+		vmg_text="$vmg_vmnam: offline migration"
+		vmg_textl="$(echo "$vmg_text" | wc -c)"
+		[ "$vmg_urlmax" -ge "$vmg_textl" ] || vmg_urlmax="$vmg_textl"
+		[ "$vmg_urlmax" -le "$((COLUMNS - 12))" ] || \
+						vmg_urlmax="$((COLUMNS - 12))"
+		vmg_nentries="$(echo "$vmg_connlist" | wc -l)"
+		vmg_sel2="$(dialog --menu "$vmg_text" "$((vmg_nentries + 7))" \
+			$((vmg_urlmax + 12)) $vmg_nentries $vmg_connlist \
+			3>&1 1>&2 2>&3 3>&- || echo EXIT)"
+		[ "$vmg_sel2" != EXIT ] || continue
+
+		vmg_target="$(echo "$vmg_connlist" | grep -E "^$vmg_sel2 " | \
+								cut -d" " -f 2)"
+		dialog --infobox "VM $vmg_vmnam\nfrom $vmg_sourceurl\nto $vmg_target" 5 $vmg_urlmax
+		vo="$(virsh -c "$vmg_sourceurl" migrate "$vmg_vmnam" \
+			"$vmg_target" --offline --persistent --undefinesource \
+			--abort-on-error 2>&1 || echo VIRSH_MIGRATE_FAILED $?)"
+		if echo "$vo" | grep -q VIRSH_MIGRATE_FAILED; then
+			dialog --msgbox "Migration failed (output below):\n\n$vo" "$((LINES - 6))" 70
+		fi
+		;;
+	(C*)    vmg_connlist="$(echo "$vmg_connlist" | \
+				sed 's/^'$vmg_sel' \(.*\)$/c'$vmg_nr' \1/g')";;
+	(c*)    vmg_connlist="$(echo "$vmg_connlist" | \
+				sed 's/^'$vmg_sel' \(.*\)$/C'$vmg_nr' \1/g')";;
+	(R)     continue;;
+	(EXIT)  exit 0;;
+	(*)     dialog --msgbox "ERROR: Unknown menu choice: $vmg_sel" 5 70;;
+	esac
+done
