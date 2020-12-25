@@ -1,0 +1,44 @@
+#!/bin/sh -eu
+cat <<EOF
+SRC Analyze 1.0.4, Copyright (c) 2013, 2020 Ma_Sys.ma.
+For further info send an e-mail to Ma_Sys.ma@web.de.
+
+EOF
+
+src="*.java"
+if ! [ $# = 0 ]; then
+	if [ $# -ge 2 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+		echo "USAGE $0 [PATTERN]"
+	else
+		src="$1"
+	fi
+fi
+
+sum=0
+
+# Note: You should normally not recurse subdirectories like this!
+#       It is preferred to use `find`. This is an old script that works well
+#       enough, though and thus this quirk was retained here.
+srcscan() {
+	# word splitting needed to expand patterns here!
+	# shellcheck disable=SC2086
+	out="$(wc -l "$1"/$src 2> /dev/null || true)"
+	tmp="$(printf '%s\n' "$out" | tail -n 1 | sed "s/^\\s\\+//g" | \
+								cut -d" " -f 1)"
+	if [ -n "$tmp" ]; then
+		sum=$((sum + tmp))
+		printf 'Listing %s\n\n' "$1"
+		printf "%s" "$out" | sort -hb
+		echo
+	fi
+
+	for i in "$1"/*; do
+		if [ -d "$i" ]; then
+			srcscan "$i"
+		fi
+	done
+}
+
+srcscan .
+
+echo "SUM = $sum lines."

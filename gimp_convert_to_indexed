@@ -1,9 +1,7 @@
 #!/bin/sh -e
-#==================================================================
-# A simple script to convert all TGA files to indexed PNG 1.0.0.2,
-# Copyright (c) 2013, Ma_Sys.ma.
+# A simple script to convert all TGA files to indexed PNG 1.0.3,
+# Copyright (c) 2013 Ma_Sys.ma.
 # For further info send an e-mail to Ma_Sys.ma@web.de.
-#==================================================================
 
 # Derived from:
 # http://www.gimptalk.com/index.php?/topic/
@@ -12,7 +10,7 @@
 indices=8
 
 if [ "$1" = "--help" -o "$1" = "-h" ]; then
-	echo "Usage $0 [indices]"
+	echo "USAGE $0 [indices]"
 	echo Converts all TGA files to indexed PNGs.
 	exit 1
 elif [ $# != 0 ]; then

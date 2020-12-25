@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Please note: This script is based on some old code and does not follow
+#              shell scripting best practices!
+
 VERSION=2.2.0
 STYLESHEET=/usr/share/mdvl/ial/ial_compatible_html.css
 CONF=./overview_conf.sh
