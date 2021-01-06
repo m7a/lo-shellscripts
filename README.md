@@ -230,7 +230,7 @@ following properties:
     directory's changes do not directly go to the `data` directory but are
     stored in `delta`instread.
 `CRYPTVOL_DELTA`
-:   See`delta` above.
+:   See `delta` above.
 `CRYPTVOL_SUBMOUNT`
 :   See `submount` above.
 `CRYPTVOL_DEVICE_NAME`
@@ -610,7 +610,7 @@ SUM = 731 lines.
 
 .../bo-big$ cloc .
        9 text files.
-       9 unique files.                              
+       9 unique files.
        2 files ignored.
 
 github.com/AlDanial/cloc v 1.81  T=0.04 s (217.6 files/s, 25488.3 lines/s)
