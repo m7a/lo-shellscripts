@@ -7,7 +7,7 @@ lang: en-US
 author: ["Linux-Fan, Ma_Sys.ma (Ma_Sys.ma@web.de)"]
 keywords: ["mdvl", "shell", "script", "linux", "virt-manager"]
 x-masysma-version: 1.0.0
-x-masysma-website: https://masysma.lima-city.de/32/shellscripts.xhtml
+x-masysma-website: https://masysma.net/32/shellscripts.xhtml
 x-masysma-repository: https://www.github.com/m7a/lo-shellscripts.git
 x-masysma-owned: 1
 x-masysma-copyright: |

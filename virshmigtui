@@ -83,7 +83,7 @@ $vmg_line"
 							--name --all | sort); do
 				vmg_curtitle="$vmg_vmnam"
 				vmg_potml="$(echo "$vmg_titles" | cut -c 8- | \
-							grep -E "^$vmg_vmnam")"
+						grep -E "^$vmg_vmnam" || true)"
 				if [ "$(echo "$vmg_potml" | wc -l)" = 1 ]; then
 					vmg_title="$(echo "$vmg_potml" | \
 							cut -c 43- | sed \

@@ -23,6 +23,7 @@ deltamount /usr/bin
 find_double_windows_filenames /usr/bin
 gimp_convert_to_indexed /usr/bin
 ma_cryptvol /usr/bin
+ma_genimages2 /usr/bin
 ma_rename_normalize /usr/bin
 ma_scrmir /usr/bin
 ma_vnc_over_ssh /usr/bin
@@ -34,9 +35,7 @@ virshmigtui /usr/bin
 </property>
 
 <!-- CI INTEGRATION -->
-<target name="package_triggered" depends="package">
-	<property name="masysma.ci.trigger" value="newver"/>
-</target>
+<target name="autoci" depends="autopackage"/>
 
 <!-- CONSTANT TPL IMPORT -->
 <property environment="env"/>

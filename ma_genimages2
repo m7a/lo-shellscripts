@@ -1,0 +1,144 @@
+#!/bin/sh -e
+# ma_genimages version 2.0.0, (c) 2018, 2020, 2022 Ma_Sys.ma <info@masysma.net>
+
+if [ $# = 0 ] || [ "$1" = "--help" ]; then
+	echo "USAGE $0 directory > img.xhtml"
+	exit 1
+fi
+
+directory="$1"
+
+cat <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+			"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<title>ma_genimages2</title>
+	<style type="text/css">
+		/* <![CDATA[ */
+		p#ma_root { text-align: justify; }
+		.th       { height: 300px; padding-bottom: 5px; }
+		.real     { max-width: 97%; max-height: 1300px; }
+		.fav      { outline: 1px solid #00ff00; }
+		.hide     { display: none; }
+		/* ]]> */
+	</style>
+	<script type="text/javascript">
+		// <![CDATA[
+		var curhl = undefined;
+
+		function ma_toggle_fav(curn) {
+			var elem = document.getElementById("ma_img_" + curn);
+			if (elem.classList.contains("fav")) {
+				elem.classList.remove("fav");
+			} else {
+				elem.classList.add("fav");
+			}
+		}
+		function ma_show_fav(favonly) {
+			var root = document.getElementById("ma_root");
+			var elems = root.getElementsByTagName("img");
+			for (var i = 0; i < elems.length; i++) {
+				var isfav = elems[i].classList.contains("fav");
+				var ishd = elems[i].classList.contains("hide");
+				if (ishd && (isfav || !favonly)) {
+					elems[i].classList.remove("hide");
+				} else if (!ishd && !isfav && favonly) {
+					elems[i].classList.add("hide");
+				}
+			}
+		}
+		function ma_bg(elem) {
+			elem.classList.remove("real");
+			elem.classList.add("th");
+		}
+		function ma_fg(elem) {
+			elem.classList.remove("th");
+			elem.classList.add("real");
+		}
+		function ma_show_elem(elem) {
+			if (elem.classList.contains("th")) {
+				ma_fg(elem);
+				if (curhl != undefined) {
+					ma_bg(curhl);
+				}
+				elem.scrollIntoView();
+				curhl = elem;
+			} else {
+				ma_bg(curhl);
+				curhl = undefined;
+			}
+		}
+		function ma_show(curn) {
+			ma_show_elem(document.getElementById("ma_img_" + curn));
+		}
+		function ma_skip_backward(elem) {
+			var useel = elem.previousElementSibling;
+			while (useel != undefined &&
+					useel.classList.contains("hide"))
+				useel = useel.previousElementSibling;
+			return useel;
+		}
+		function ma_skip_forward(elem) {
+			var useel = elem.nextElementSibling;
+			while (useel != undefined &&
+					useel.classList.contains("hide"))
+				useel = useel.nextElementSibling;
+			return useel;
+		}
+
+		document.addEventListener("keydown", function(event) {
+			var useel = undefined;
+
+			if ((event.key == "ArrowLeft" ||
+						event.key == "ArrowRight") &&
+						curhl == undefined) {
+				useel = document.getElementById(
+							"ma_root").children[0];
+				if (useel.classList.contains("hide")) {
+					useel = ma_skip_forward(useel);
+				}
+			} else if (event.key == "ArrowLeft") {
+				useel = ma_skip_backward(curhl);
+			} else if (event.key == "ArrowRight") {
+				useel = ma_skip_forward(curhl);
+			}
+
+			if (useel != undefined) {
+				ma_show_elem(useel);
+			}
+		}, false);
+		// ]]>
+	</script>
+</head>
+<body>
+	<p>
+		<a href="#" onclick="ma_show_fav(false);">all</a>
+		&#160;&#160;&#160;&#160;
+		<a href="#" onclick="ma_show_fav(true);">fav</a>
+		&#160;&#160;&#160;&#160;
+		&lt; prev
+		&#160;&#160;&#160;&#160;
+		next &gt;
+	</p>
+	<p id="ma_root">
+EOF
+
+curn=1
+find "$directory" -maxdepth 1 -type f \( -name "*.jpg" -or -name "*.png" -or \
+		-name "*.webp" -or -name "*.gif" \) | sort | while read -r i; do
+	if [ -f "$i" ]; then
+cat <<EOF
+		<img id="ma_img_$curn" class="th" onclick="ma_show('$curn');"
+				onauxclick="ma_toggle_fav('$curn');" src="$i"/>
+EOF
+		curn=$((curn + 1))
+	fi
+done
+
+cat <<EOF
+	</p>
+</body>
+</html>
+EOF

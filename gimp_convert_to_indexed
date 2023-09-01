@@ -7,6 +7,11 @@
 # http://www.gimptalk.com/index.php?/topic/
 #		46715-batch-convert-xcf-to-png/page__p__354668#entry354668
 
+# Variant: Upscale Image
+# -> (gimp-image-scale image 1100 1442)
+# Variant: Unsharp mask (radius, amount, threshold)
+# -> (plug-in-unsharp-mask RUN-NONINTERACTIVE image layer 3.0 1.0 0.0)
+
 indices=8
 
 if [ "$1" = "--help" -o "$1" = "-h" ]; then
@@ -23,10 +28,10 @@ gimp -n -i -d -f -b - > /dev/null <<EOF
 	(while (pair? file's) 
 		(set! image (car (gimp-file-load RUN-NONINTERACTIVE
 						(car file's) (car file's))))
-		(gimp-image-convert-indexed image NO-DITHER MAKE-PALETTE
-							$indices FALSE TRUE "")
 		(set! layer (car (gimp-image-merge-visible-layers image
 								CLIP-TO-IMAGE)))
+		(gimp-image-convert-indexed image NO-DITHER MAKE-PALETTE
+							$indices FALSE TRUE "")
 		(set! filename (string-append (substring (car file's) 0
 			(- (string-length (car file's)) 4)) "_indexed.png"))
 		(gimp-file-save RUN-NONINTERACTIVE image layer filename
